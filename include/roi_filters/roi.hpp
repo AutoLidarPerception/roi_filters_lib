@@ -91,6 +91,7 @@ namespace roi {
             for (size_t pt = 0u; pt < cloud_in->size(); ++pt) {
                 const PointT& point = cloud_in->points[pt];
                 const double dist = common::geometry::calcCylinderDistNorm<PointT>(point);
+                // Step 1: filter out a large part
                 if (dist > radius_min_squared && dist < radius_max_squared) {
                     if (point.z > z_limit_min && point.z < z_limit_max) {
                         cloud->points.push_back(point);
@@ -114,21 +115,26 @@ namespace roi {
                                 float z_limit_min, float z_limit_max,
                                 typename pcl::PointCloud<PointT>::Ptr cloud)
     {
-        //TODO use a z-bandpass
         if (cloud->size()) {
             typename pcl::PointCloud<PointT>::Ptr cloud_in(new pcl::PointCloud<PointT>);
             *cloud_in = *cloud;
             cloud->clear();
 
             const float forward = radius_max;
+            const float back = -radius_max;
             const float left = -radius_min;
             const float right = radius_min;
 
             for (size_t pt = 0u; pt < cloud_in->size(); ++pt) {
                 const PointT& point = cloud_in->points[pt];
-                if (point.z > z_limit_min && point.z < z_limit_max) {
-                    if (point.x < forward && point.y > left && point.y < right) {
-                        cloud->points.push_back(point);
+                // Step 1: filter out a large part
+                if (point.y > left && point.y < right) {
+                    // Step 2: filter out small part
+                    if (point.z > z_limit_min && point.z < z_limit_max) {
+                        // Step 3: almost not filter out
+                        if (point.x > back && point.x < forward) {
+                            cloud->points.push_back(point);
+                        }
                     }
                 }
             }
